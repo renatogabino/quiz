@@ -2,6 +2,28 @@ import pytest
 from model import Question
 
 
+# Fixtures para reutilização em testes
+@pytest.fixture
+def simple_question():
+    """Fixture que cria uma questão simples"""
+    return Question(title='Test Question')
+
+@pytest.fixture
+def question_with_multiple_choices():
+    """Fixture que cria uma questão com várias choices"""
+    question = Question(title='Multiple Choice Test', max_selections=2)
+    question.add_choice("Option A", False)
+    question.add_choice("Option B", True)
+    question.add_choice("Option C", True)
+    question.add_choice("Option D", False)
+    return question
+
+@pytest.fixture
+def high_value_question():
+    """Fixture que cria uma questão de alto valor"""
+    return Question(title='Important Question', points=75, max_selections=3)
+
+
 def test_create_question():
     question = Question(title='q1')
     assert question.id != None
@@ -144,3 +166,31 @@ def test_correct_selection_with_all_correct_choices():
     
     assert len(correctSelectedChoices) == 1
     assert correctSelectedChoices[0] == correctChoice.id
+
+# Commit 3: Testing with fixtures
+
+def test_question_can_receive_first_choice(simple_question):
+    simple_question.add_choice("First option", True)
+    
+    assert len(simple_question.choices) == 1
+    assert simple_question.choices[0].text == "First option"
+
+def test_student_gets_score_when_selecting_all_correct_answers(question_with_multiple_choices):
+    all_correct_ids = [choice.id for choice in question_with_multiple_choices.choices if choice.is_correct]
+    
+    score = question_with_multiple_choices.correct_selected_choices(all_correct_ids)
+    
+    assert len(score) == 2
+
+def test_question_rejects_excessive_answer_selections(high_value_question):
+    high_value_question.add_choice("Option 1", False)
+    high_value_question.add_choice("Option 2", False) 
+    high_value_question.add_choice("Option 3", False)
+    high_value_question.add_choice("Option 4", False)
+    
+    too_many_selections = [choice.id for choice in high_value_question.choices]
+    
+    with pytest.raises(Exception) as exc_info:
+        high_value_question.correct_selected_choices(too_many_selections)
+    assert "Cannot select more than 3 choices" in str(exc_info.value)
+
